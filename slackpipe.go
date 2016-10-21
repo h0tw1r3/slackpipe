@@ -44,11 +44,10 @@ func main() {
 	args.Username = DEFAULT_NAME
 	args.Emoji = DEFAULT_EMOJI
 	args.Channel = DEFAULT_CHANNEL
+	args.Token = ENV_TOKEN_DISPLAY
 
 	env_token := os.Getenv("SLACK_TOKEN")
-	if len(env_token) > 0 {
-		args.Token = ENV_TOKEN_DISPLAY
-	} else {
+	if len(env_token) < 1 && len(DEFAULT_SLACK_TOKEN) > 0 {
 		args.Token = "builtin"
 	}
 
