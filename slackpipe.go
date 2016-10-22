@@ -22,10 +22,10 @@ const (
 
 type args struct {
 	Message   string   `arg:"positional"`
-	Username  string   `arg:"help:Username"`
-	Emoji     string   `arg:"help:Emoji tag"`
-	Channel   string   `arg:"help:Channel name or ID"`
-	Token     string   `arg:"help:Slack Token"`
+	Username  string   `arg:"-u,help:Username"`
+	Emoji     string   `arg:"-e,help:Emoji tag"`
+	Channel   string   `arg:"-c,help:Channel name or ID"`
+	Token     string   `arg:"-t,help:Slack Token"`
 }
 
 func (args) Version() string {
