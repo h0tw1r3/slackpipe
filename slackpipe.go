@@ -4,6 +4,9 @@ import (
 	"os"
 	"bufio"
 	"fmt"
+	"io/ioutil"
+	"io"
+	"strings"
 
 	"github.com/nlopes/slack"
 	"github.com/alexflint/go-arg"
@@ -18,6 +21,7 @@ const (
 	DEFAULT_NAME = "pipe"
 	DEFAULT_CHANNEL = "#general"
 	DEFAULT_SLACK_TOKEN = ""
+	DEFAULT_FILEMODE = false
 )
 
 type args struct {
@@ -26,6 +30,7 @@ type args struct {
 	Emoji     string   `arg:"-e,help:Emoji tag"`
 	Channel   string   `arg:"-c,help:Channel name or ID"`
 	Token     string   `arg:"-t,help:Slack Token"`
+	FileMode  bool     `arg:"-f,help:Upload file (Message is pipe Title)"`
 }
 
 func (args) Version() string {
@@ -45,6 +50,7 @@ func main() {
 	args.Emoji = DEFAULT_EMOJI
 	args.Channel = DEFAULT_CHANNEL
 	args.Token = ENV_TOKEN_DISPLAY
+	args.FileMode = DEFAULT_FILEMODE
 
 	env_token := os.Getenv("SLACK_TOKEN")
 	if len(env_token) < 1 && len(DEFAULT_SLACK_TOKEN) > 0 {
@@ -70,24 +76,56 @@ func main() {
 	}
 
 	api := slack.New(args.Token)
-	params := slack.PostMessageParameters{}
-	params.IconEmoji = args.Emoji
-	params.Username = args.Username
 
-	if args.Message != "" {
-		_, _, err := api.PostMessage(args.Channel, args.Message, params)
+	if have_stdin && args.FileMode {
+		tempfile, err := ioutil.TempFile(os.TempDir(), APP_NAME)
 		FatalCheck(err)
-	}
-	if have_stdin {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			stdin_line := scanner.Text()
-			if len(stdin_line) > 0 {
-				_, _, err := api.PostMessage(args.Channel, stdin_line, params)
-				FatalCheck(err)
+		defer os.Remove(tempfile.Name())
+
+		data := make([]byte, 4096)
+
+		input := bufio.NewReader(os.Stdin)
+		output := bufio.NewWriter(tempfile)
+
+		for {
+			data = data[:cap(data)]
+			n, err := input.Read(data)
+			if err == io.EOF {
+				break
 			}
+			data = data[:n]
+			n, err = output.Write(data)
+			FatalCheck(err)
 		}
-		FatalCheck(scanner.Err())
+		output.Flush()
+
+		params := slack.FileUploadParameters{}
+		params.Title = args.Message
+		params.File = tempfile.Name()
+		params.Filetype = "auto"
+		params.Channels = strings.Split(args.Channel, ",")
+		tempfile.Close()
+
+		_, uerr := api.UploadFile(params)
+		FatalCheck(uerr)
+	} else {
+		params := slack.PostMessageParameters{}
+		params.IconEmoji = args.Emoji
+		params.Username = args.Username
+
+		if have_stdin {
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				stdin_line := scanner.Text()
+				if len(stdin_line) > 0 {
+					_, _, err := api.PostMessage(args.Channel, stdin_line, params)
+					FatalCheck(err)
+				}
+			}
+			FatalCheck(scanner.Err())
+		} else {
+			_, _, err := api.PostMessage(args.Channel, args.Message, params)
+			FatalCheck(err)
+		}
 	}
-	return
 }
