@@ -8,13 +8,15 @@ import (
 	"io"
 	"strings"
 	"bytes"
+	"runtime"
 
 	"github.com/nlopes/slack"
 	"github.com/alexflint/go-arg"
 )
 
+var Version = "0.2"
+
 const (
-	APP_VERSION = "0.1"
 	APP_NAME = "SlackPipe"
 	APP_LEGAL = "Copyright (C) 2016 Jeffrey Clark\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law."
 	ENV_TOKEN_DISPLAY = "ENV['SLACK_TOKEN']"
@@ -35,7 +37,7 @@ type args struct {
 }
 
 func (args) Version() string {
-	return fmt.Sprintf("%s version %s\n%s\n", APP_NAME, APP_VERSION, APP_LEGAL)
+	return fmt.Sprintf("%s, version %s (%s-%s)\n%s\n", APP_NAME, Version, runtime.GOOS, runtime.GOARCH, APP_LEGAL)
 }
 
 func FatalCheck(e error) {
