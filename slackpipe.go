@@ -63,7 +63,7 @@ func main() {
 	stat, _ := os.Stdin.Stat()
 	have_stdin := (stat.Mode() & os.ModeNamedPipe != 0)
 	if ! have_stdin && args.Message == "" {
-		parsedargs.Fail("MESSAGE must be an argument or | to STDIN")
+		parsedargs.Fail("MESSAGE or Stdin required")
 	}
 
 	if args.Token == "builtin" {
