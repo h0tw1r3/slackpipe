@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"io"
 	"strings"
+	"bytes"
 
 	"github.com/nlopes/slack"
 	"github.com/alexflint/go-arg"
@@ -115,17 +116,16 @@ func main() {
 
 		if have_stdin {
 			scanner := bufio.NewScanner(os.Stdin)
+			var buffer bytes.Buffer
 			for scanner.Scan() {
-				stdin_line := scanner.Text()
-				if len(stdin_line) > 0 {
-					_, _, err := api.PostMessage(args.Channel, stdin_line, params)
-					FatalCheck(err)
-				}
+				buffer.Write(scanner.Bytes())
+				buffer.WriteString("\n")
 			}
 			FatalCheck(scanner.Err())
-		} else {
-			_, _, err := api.PostMessage(args.Channel, args.Message, params)
-			FatalCheck(err)
+			args.Message = buffer.String()
 		}
+		args.Message = strings.Replace(args.Message, "\\n", "\n", -1)
+		_, _, err := api.PostMessage(args.Channel, args.Message, params)
+		FatalCheck(err)
 	}
 }
