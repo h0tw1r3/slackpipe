@@ -25,6 +25,7 @@ const (
 	DEFAULT_CHANNEL = "#general"
 	DEFAULT_SLACK_TOKEN = ""
 	DEFAULT_FILEMODE = false
+	DEFAULT_CODEBLOCK = false
 )
 
 type args struct {
@@ -34,6 +35,7 @@ type args struct {
 	Channel   string   `arg:"-c,help:Channel name or ID"`
 	Token     string   `arg:"-t,help:Slack Token"`
 	FileMode  bool     `arg:"-f,help:Upload file (Message is pipe Title)"`
+	CodeBlock bool     `arg:"-b,help:Code block (wrap in backticks)"`
 }
 
 func (args) Version() string {
@@ -54,6 +56,7 @@ func main() {
 	args.Channel = DEFAULT_CHANNEL
 	args.Token = ENV_TOKEN_DISPLAY
 	args.FileMode = DEFAULT_FILEMODE
+	args.CodeBlock = DEFAULT_CODEBLOCK
 
 	env_token := os.Getenv("SLACK_TOKEN")
 	if len(env_token) < 1 && len(DEFAULT_SLACK_TOKEN) > 0 {
@@ -119,15 +122,26 @@ func main() {
 		if have_stdin {
 			scanner := bufio.NewScanner(os.Stdin)
 			var buffer bytes.Buffer
+			if args.CodeBlock {
+				buffer.WriteString("```")
+			}
 			for scanner.Scan() {
 				buffer.Write(scanner.Bytes())
 				buffer.WriteString("\n")
 			}
+			if args.CodeBlock {
+				if buffer.Len() > 3 {
+					buffer.Truncate(buffer.Len()-1)
+				}
+				buffer.WriteString("```")
+			}
 			FatalCheck(scanner.Err())
 			args.Message = buffer.String()
+		} else if args.CodeBlock {
+			args.Message = fmt.Sprintf("```%s```", args.Message)
 		}
 		args.Message = strings.Replace(args.Message, "\\n", "\n", -1)
-		_, _, err := api.PostMessage(args.Channel, args.Message, params)
+		_, _, err := api.PostMessage(args.Channel, strings.TrimSpace(args.Message), params)
 		FatalCheck(err)
 	}
 }
